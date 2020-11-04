@@ -52,21 +52,28 @@ def main(args):
 
     ##### TRAINING ####
 
+
     def compute_si_sdr(inputs: torch.Tensor, targets: torch.Tensor):
-        inputs = inputs.view(inputs.shape[0], -1)
+        # shape : batch, channel, length
         shape = inputs.shape
-        eps = torch.ones(shape[0]).cuda() * 0.0001
-        targets = targets.view(targets.shape[0], -1)
-        #print(inputs)
-        #print(targets)
-        err_res = torch.bmm(torch.unsqueeze(inputs, 1), torch.unsqueeze(targets, 2)).view(shape[0], 1).repeat(1, shape[1]) \
-                  * targets / (torch.norm(targets, dim=1) + eps).view(shape[0], 1).repeat(1, shape[1]) 
-        #print(err_res)
-        err_tar = inputs - err_res
-        #print(err_tar)
-        si_sdr = 10 * torch.mean(torch.log10(torch.norm(err_tar, dim=1) / (torch.norm(err_res, dim=1) + eps)))
-        #print(si_sdr)
-        return si_sdr
+        eps = 1e-4
+        mean_inputs = torch.mean(inputs, dim=2, keepdim=True)
+        mean_targets = torch.mean(targets, dim=2, keepdim=True)
+        zero_mean_inputs = inputs - mean_inputs
+        zero_mean_targets = targets - mean_targets
+
+        s_targets = torch.unsqueeze(zero_mean_targets, dim=1)  # batch, 1, channel, length
+        s_inputs = torch.unsqueeze(zero_mean_inputs, dim=2)    # batch, channel, 1, length
+
+        pair_wise_dot = torch.sum(s_inputs * s_targets, dim=3, keepdim=True)  # [B, C, C, 1]
+        s_target_energy = torch.sum(s_targets ** 2, dim=3, keepdim=True) + eps  # [B, 1, C, 1]
+        pair_wise_proj = pair_wise_dot * s_targets / s_target_energy  # [B, C, C, T]
+
+        e_noise = s_inputs - pair_wise_proj  # [B, C, C, T]
+
+        pair_wise_si_snr = torch.sum(pair_wise_proj ** 2, dim=3) / (torch.sum(e_noise ** 2, dim=3) + eps)
+        pair_wise_si_snr = -10 * torch.mean(torch.log10(pair_wise_si_snr + eps))  # [B, C, C]
+        return pair_wise_si_snr
 
     # Set up the loss function
     if args.loss == "L1":

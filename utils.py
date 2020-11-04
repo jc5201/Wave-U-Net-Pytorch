@@ -138,7 +138,7 @@ def load_model(model, optimizer, path, cuda):
     if isinstance(model, torch.nn.DataParallel):
         model = model.module  # load state dict of wrapped module
     if cuda:
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, map_location='cuda:0')
     else:
         checkpoint = torch.load(path, map_location='cpu')
     try:
