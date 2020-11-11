@@ -229,3 +229,30 @@ class Waveunet(nn.Module):
             for idx, inst in enumerate(self.instruments):
                 out_dict[inst] = out[:, idx * self.num_outputs:(idx + 1) * self.num_outputs]
             return out_dict
+
+    def tsne_forward_module(self, x, module):
+        shortcuts = []
+        out = x
+
+        # DOWNSAMPLING BLOCKS
+        for block in module.downsampling_blocks:
+            out, short = block(out)
+            shortcuts.append(short)
+
+        # BOTTLENECK CONVOLUTION
+        for conv in module.bottlenecks:
+            out = conv(out)
+
+        return out
+
+    def tsne_forward(self, x, inst=None):
+        curr_input_size = x.shape[-1]
+        assert(curr_input_size == self.input_size) # User promises to feed the proper input himself, to get the pre-calculated (NOT the originally desired) output size
+
+        if self.separate:
+            return self.tsne_forward_module(x, self.waveunets[inst])
+        else:
+            assert(len(self.waveunets) == 1)
+            out = self.tsne_forward_module(x, self.waveunets["ALL"])
+
+            return out
