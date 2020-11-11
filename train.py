@@ -26,7 +26,7 @@ def main(args):
     target_outputs = int(args.output_size * args.sr)
     model = Waveunet(args.channels, num_features, args.channels, args.instruments, kernel_size=args.kernel_size,
                      target_output_size=target_outputs, depth=args.depth, strides=args.strides,
-                     conv_type=args.conv_type, res=args.res, separate=args.separate)
+                     conv_type=args.conv_type, res=args.res, separate=args.separate, difference_output=args.difference_output)
 
     if args.cuda:
         model = utils.DataParallel(model)
@@ -51,7 +51,6 @@ def main(args):
     dataloader = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, worker_init_fn=utils.worker_init_fn)
 
     ##### TRAINING ####
-
 
     def compute_si_sdr(inputs: torch.Tensor, targets: torch.Tensor):
         # shape : batch, channel, length
@@ -194,12 +193,10 @@ def main(args):
 if __name__ == '__main__':
     ## TRAIN PARAMETERS
     parser = argparse.ArgumentParser()
-    parser.add_argument('--instruments', type=str, nargs='+', default=["bass", "drums", "other", "vocals"],
+    parser.add_argument('--instruments', type=str, nargs='+', default=["vocals", "bass", "drums", "other"],
                         help="List of instruments to separate (default: \"bass drums other vocals\")")
     parser.add_argument('--cuda', action='store_true',
                         help='Use CUDA (default: False)')
-    parser.add_argument('--core', type=int, default=0,
-                        help='Specify GPU core')
     parser.add_argument('--num_workers', type=int, default=1,
                         help='Number of data loader worker threads (default: 1)')
     parser.add_argument('--features', type=int, default=32,
@@ -241,7 +238,7 @@ if __name__ == '__main__':
     parser.add_argument('--example_freq', type=int, default=200,
                         help="Write an audio summary into Tensorboard logs every X training iterations")
     parser.add_argument('--loss', type=str, default="L1",
-                        help="L1 or L2")
+                        help="L1, L2 or SI-SDR")
     parser.add_argument('--conv_type', type=str, default="gn",
                         help="Type of convolution (normal, BN-normalised, GN-normalised): normal/bn/gn")
     parser.add_argument('--res', type=str, default="fixed",
@@ -250,6 +247,9 @@ if __name__ == '__main__':
                         help="Train separate model for each source (1) or only one (0)")
     parser.add_argument('--feature_growth', type=str, default="double",
                         help="How the features in each layer should grow, either (add) the initial number of features each time, or multiply by 2 (double)")
+
+    parser.add_argument('--difference_output', type=int, default=0,
+                        help="Train last instrument as difference of input and sum of other instruments (1 for True and 0 for False)")
 
     args = parser.parse_args()
 

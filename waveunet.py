@@ -98,7 +98,7 @@ class DownsamplingBlock(nn.Module):
         return curr_size
 
 class Waveunet(nn.Module):
-    def __init__(self, num_inputs, num_channels, num_outputs, instruments, kernel_size, target_output_size, conv_type, res, separate=False, depth=1, strides=2):
+    def __init__(self, num_inputs, num_channels, num_outputs, instruments, kernel_size, target_output_size, conv_type, res, separate=False, depth=1, strides=2, difference_output=False):
         super(Waveunet, self).__init__()
 
         self.num_levels = len(num_channels)
@@ -109,6 +109,7 @@ class Waveunet(nn.Module):
         self.depth = depth
         self.instruments = instruments
         self.separate = separate
+        self.difference_output = difference_output
 
         # Only odd filter kernels allowed
         assert(kernel_size % 2 == 1)
@@ -137,7 +138,7 @@ class Waveunet(nn.Module):
                 [ConvLayer(num_channels[-1], num_channels[-1], kernel_size, 1, conv_type) for _ in range(depth)])
 
             # Output conv
-            outputs = num_outputs if separate else num_outputs * len(instruments)
+            outputs = num_outputs if separate else (num_outputs * len(instruments) if not self.difference_output else num_outputs * (len(instruments) - 1))
             module.output_conv = nn.Conv1d(num_channels[0], outputs, 1)
 
             self.waveunets[instrument] = module
@@ -227,7 +228,12 @@ class Waveunet(nn.Module):
 
             out_dict = {}
             for idx, inst in enumerate(self.instruments):
-                out_dict[inst] = out[:, idx * self.num_outputs:(idx + 1) * self.num_outputs]
+                if self.difference_output and len(self.instruments) == idx + 1:
+                    print("debug : " + str(x.shape))
+                    cropped_input = x[:, :, (self.input_size - self.output_size) // 2:(self.input_size - self.output_size) // 2 + self.output_size]
+                    out_dict[inst] = cropped_input - torch.sum(torch.stack(list(out_dict.values()), dim=0), dim=0)
+                else:
+                    out_dict[inst] = out[:, idx * self.num_outputs:(idx + 1) * self.num_outputs]
             return out_dict
 
     def tsne_forward_module(self, x, module):
