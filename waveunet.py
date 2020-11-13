@@ -229,7 +229,6 @@ class Waveunet(nn.Module):
             out_dict = {}
             for idx, inst in enumerate(self.instruments):
                 if self.difference_output and len(self.instruments) == idx + 1:
-                    print("debug : " + str(x.shape))
                     cropped_input = x[:, :, (self.input_size - self.output_size) // 2:(self.input_size - self.output_size) // 2 + self.output_size]
                     out_dict[inst] = cropped_input - torch.sum(torch.stack(list(out_dict.values()), dim=0), dim=0)
                 else:

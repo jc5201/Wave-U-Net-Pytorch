@@ -12,7 +12,7 @@ def main(args):
     target_outputs = int(args.output_size * args.sr)
     model = Waveunet(args.channels, num_features, args.channels, args.instruments, kernel_size=args.kernel_size,
                      target_output_size=target_outputs, depth=args.depth, strides=args.strides,
-                     conv_type=args.conv_type, res=args.res, separate=args.separate)
+                     conv_type=args.conv_type, res=args.res, separate=args.separate, difference_output=args.difference_output)
 
     if args.cuda:
         model = utils.DataParallel(model)
@@ -67,6 +67,10 @@ if __name__ == '__main__':
     parser.add_argument('--input', type=str, default=os.path.join("audio_examples", "Cristina Vane - So Easy", "mix.mp3"),
                         help="Path to input mixture to be separated")
     parser.add_argument('--output', type=str, default=None, help="Output path (same folder as input path if not set)")
+
+    parser.add_argument('--difference_output', type=int, default=0,
+                        help="Train last instrument as difference of input and sum of other instruments (1 for True and 0 for False)")
+
 
     args = parser.parse_args()
 
