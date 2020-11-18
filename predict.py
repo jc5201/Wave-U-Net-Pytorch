@@ -31,8 +31,8 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--instruments', type=str, nargs='+', default=["bass", "drums", "other", "vocals"],
-                        help="List of instruments to separate (default: \"bass drums other vocals\")")
+    parser.add_argument('--instruments', type=str, nargs='+', default=["vocals", "bass", "drums", "other"],
+                        help="List of instruments to separate (default: \"vocals bass drums other\")")
     parser.add_argument('--cuda', action='store_true',
                         help='Use CUDA (default: False)')
     parser.add_argument('--features', type=int, default=32,
