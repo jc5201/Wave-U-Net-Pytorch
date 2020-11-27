@@ -17,6 +17,8 @@ from data import get_musdb_folds, SeparationDataset, random_amplify, crop
 from test import evaluate, validate
 from waveunet import Waveunet
 
+from loss import compute_si_sdr
+
 def main(args):
     #torch.backends.cudnn.benchmark=True # This makes dilated conv much faster for CuDNN 7.5
 
@@ -52,27 +54,6 @@ def main(args):
 
     ##### TRAINING ####
 
-    def compute_si_sdr(inputs: torch.Tensor, targets: torch.Tensor):
-        # shape : batch, channel, length
-        shape = inputs.shape
-        eps = 1e-4
-        mean_inputs = torch.mean(inputs, dim=2, keepdim=True)
-        mean_targets = torch.mean(targets, dim=2, keepdim=True)
-        zero_mean_inputs = inputs - mean_inputs
-        zero_mean_targets = targets - mean_targets
-
-        s_targets = torch.unsqueeze(inputs, dim=1)  # batch, 1, channel, length
-        s_inputs = torch.unsqueeze(targets, dim=2)    # batch, channel, 1, length
-
-        pair_wise_dot = torch.sum(s_inputs * s_targets, dim=3, keepdim=True)  # [B, C, C, 1]
-        s_target_energy = torch.sum(s_targets ** 2, dim=3, keepdim=True) + eps  # [B, 1, C, 1]
-        pair_wise_proj = pair_wise_dot * s_targets / s_target_energy  # [B, C, C, T]
-
-        e_noise = s_inputs - pair_wise_proj  # [B, C, C, T]
-
-        pair_wise_si_snr = torch.sum(pair_wise_proj ** 2, dim=3) / (torch.sum(e_noise ** 2, dim=3) + eps)
-        pair_wise_si_snr = -10 * torch.mean(torch.log10(pair_wise_si_snr + eps))  # [B, C, C]
-        return pair_wise_si_snr
 
     # Set up the loss function
     if args.loss == "L1":
