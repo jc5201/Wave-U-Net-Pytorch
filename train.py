@@ -61,8 +61,8 @@ def main(args):
         zero_mean_inputs = inputs - mean_inputs
         zero_mean_targets = targets - mean_targets
 
-        s_targets = torch.unsqueeze(zero_mean_targets, dim=1)  # batch, 1, channel, length
-        s_inputs = torch.unsqueeze(zero_mean_inputs, dim=2)    # batch, channel, 1, length
+        s_targets = torch.unsqueeze(inputs, dim=1)  # batch, 1, channel, length
+        s_inputs = torch.unsqueeze(targets, dim=2)    # batch, channel, 1, length
 
         pair_wise_dot = torch.sum(s_inputs * s_targets, dim=3, keepdim=True)  # [B, C, C, 1]
         s_target_energy = torch.sum(s_targets ** 2, dim=3, keepdim=True) + eps  # [B, 1, C, 1]

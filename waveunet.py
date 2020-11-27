@@ -139,6 +139,7 @@ class Waveunet(nn.Module):
 
             # Output conv
             outputs = num_outputs if separate else (num_outputs * len(instruments) if not self.difference_output else num_outputs * (len(instruments) - 1))
+            #module.output_conv = nn.Conv1d(num_channels[0], outputs, 1)
             module.output_conv = nn.Sequential(nn.Conv1d(num_channels[0], outputs, 1),
                 nn.Tanh())
 
@@ -249,6 +250,11 @@ class Waveunet(nn.Module):
         for conv in module.bottlenecks:
             out = conv(out)
 
+        # UPSAMPLING BLOCKS
+        for idx, block in enumerate(module.upsampling_blocks):
+            out = block(out, shortcuts[-1 - idx])
+
+        # OUTPUT CONV
         return out
 
     def tsne_forward(self, x, inst=None):

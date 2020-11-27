@@ -59,6 +59,8 @@ def tsne_predict(audio, model, inst):
 
             # Convert to Pytorch tensor for model prediction
             curr_input = torch.from_numpy(curr_input).unsqueeze(0)
+            if args.cuda:
+                curr_input = curr_input.cuda()
 
             # Predict
             outputs = tsne_compute_output(model, curr_input, inst).cpu().numpy()
@@ -123,7 +125,8 @@ def main(args):
 
     labels = ['#ff0000' for i in range(len(output1))] + ['#00ff00' for i in range(len(output2))] + ['#0000ff' for i in range(len(output3))]
     plt.scatter(tsne_output[:, 0], tsne_output[:, 1], c=labels, s=5)
-    plt.show()
+    #plt.show()
+    plt.savefig(args.output)
 
 
 
