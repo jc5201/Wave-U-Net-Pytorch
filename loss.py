@@ -26,12 +26,13 @@ def compute_si_sdr(inputs: torch.Tensor, targets: torch.Tensor):
     pair_wise_si_snr = -10 * torch.mean(torch.log10(pair_wise_si_snr + eps))  # [B, C, C]
     return pair_wise_si_snr
 
-def compute_L1_entropy(n_fft) :
+def compute_L1_entropy(m, r) :
     def compute(inputs, targets):
         # shape : batch, channel, length
         L1 = nn.L1Loss()
 
-        return L1(inputs, targets) + compute_entropy(inputs, targets, n_fft)
+        concatted = torch.cat([inputs, targets], dim=2)
+        return L1(inputs, targets) + compute_approximate_entropy(concatted, m, r)
     return compute
 
 def compute_entropy(inputs, targets, n_fft):
@@ -56,4 +57,34 @@ def compute_entropy(inputs, targets, n_fft):
     entropy_sum = torch.mean(torch.mean(entropy, dim=2), dim=1) * -1
 
     return entropy_sum
+
+def compute_approximate_entropy(inputs, m, r):
+    phi_m = compute_ap_phi(inputs, m, r)    
+    phi_m1 = compute_ap_phi(inputs, m + 1, r)    
+    return phi_m - phi_m1
+
+def compute_ap_phi(inputs, m, r):
+    mono_inputs = torch.mean(inputs, dim=1)
+    # [B, T]
+    clip_inputs = torch.stack([mono_inputs[:, i:i+m] for i in range(0, mono_inputs.shape[1] - m)], dim=1)
+    # [B, T-m, m]
+    ref_inputs = torch.unsqueeze(clip_inputs[:, :, 0], 2)
+    ref_inputs = ref_inputs.repeat(1, 1, m)
+
+    dif_inputs = clip_inputs - ref_inputs
+
+    repeat_inputs = torch.unsqueeze(dif_inputs, 2)    # [B, T-m, 1, m]
+    repeat_inputs = repeat_inputs.repeat(1, 1, clip_inputs.shape[1], 1) # [B, T-m, T-m, m] 
+    repeat_inputs = repeat_inputs.view(repeat_inputs.shape[0], -1, repeat_inputs.shape[3])
+
+    repeat_targets = dif_inputs.repeat(1, clip_inputs.shape[1], 1) # [B, T-m ** 2, m]
+
+    distance = torch.sum((repeat_inputs - repeat_targets), dim=2).view(clip_inputs.shape[0], clip_inputs.shape[1], clip_inputs.shape[1])
+    # [B, T-m, T-m]
+    c = torch.sum(torch.sigmoid(torch.ones_like(distance) * r - distance), dim=2)
+    # [B, T-m]
+    p = torch.mean(torch.log(c), dim=1)
+    # [B]
+    return p
+
 

@@ -17,7 +17,7 @@ from data import get_musdb_folds, SeparationDataset, random_amplify, crop
 from test import evaluate, validate
 from waveunet import Waveunet
 
-from loss import compute_si_sdr
+from loss import compute_si_sdr, compute_L1_entropy
 
 def main(args):
     #torch.backends.cudnn.benchmark=True # This makes dilated conv much faster for CuDNN 7.5
@@ -62,6 +62,8 @@ def main(args):
         criterion = nn.MSELoss()
     elif args.loss == "SI-SDR":
         criterion = compute_si_sdr
+    elif args.loss == "entropy":
+        criterion = compute_L1_entropy(m, r)
     else:
         raise NotImplementedError("Couldn't find this loss!")
 
@@ -231,6 +233,11 @@ if __name__ == '__main__':
 
     parser.add_argument('--difference_output', type=int, default=0,
                         help="Train last instrument as difference of input and sum of other instruments (1 for True and 0 for False)")
+
+    parser.add_argument('--approximate_entropy_m', type=int, default=32,
+                        help="")
+    parser.add_argument('--approximate_entropy_r', type=float, default=2,
+                        help="")
 
     args = parser.parse_args()
 
