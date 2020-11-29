@@ -63,7 +63,7 @@ def main(args):
     elif args.loss == "SI-SDR":
         criterion = compute_si_sdr
     elif args.loss == "entropy":
-        criterion = compute_L1_entropy(m, r)
+        criterion = compute_L1_entropy(args.approximate_entropy_m, args.approximate_entropy_r)
     else:
         raise NotImplementedError("Couldn't find this loss!")
 

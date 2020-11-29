@@ -139,9 +139,9 @@ class Waveunet(nn.Module):
 
             # Output conv
             outputs = num_outputs if separate else (num_outputs * len(instruments) if not self.difference_output else num_outputs * (len(instruments) - 1))
-            #module.output_conv = nn.Conv1d(num_channels[0], outputs, 1)
-            module.output_conv = nn.Sequential(nn.Conv1d(num_channels[0], outputs, 1),
-                nn.Tanh())
+            module.output_conv = nn.Conv1d(num_channels[0], outputs, 1)
+            #module.output_conv = nn.Sequential(nn.Conv1d(num_channels[0], outputs, 1),
+            #    nn.Tanh())
 
             self.waveunets[instrument] = module
 
