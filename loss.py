@@ -31,11 +31,12 @@ def compute_L1_entropy(m, r) :
         # shape : batch, channel, length
         L1 = nn.L1Loss()
 
-        concatted = torch.cat([inputs, targets], dim=2)
-        return L1(inputs, targets) + compute_approximate_entropy(concatted, m, r)
+        #concatted = torch.cat([inputs, targets], dim=2)
+        result = L1(inputs, targets) + 0.01 * compute_power_spectral_entropy(inputs)
+        return torch.mean(result)
     return compute
 
-def compute_entropy(inputs, targets, n_fft):
+def compute_spatial_entropy(inputs, targets, n_fft):
     eps = 0.001
 
     mono_inputs = torch.mean(inputs, dim=1)
@@ -73,18 +74,39 @@ def compute_ap_phi(inputs, m, r):
 
     dif_inputs = clip_inputs - ref_inputs
 
-    repeat_inputs = torch.unsqueeze(dif_inputs, 2)    # [B, T-m, 1, m]
-    repeat_inputs = repeat_inputs.repeat(1, 1, clip_inputs.shape[1], 1) # [B, T-m, T-m, m] 
-    repeat_inputs = repeat_inputs.view(repeat_inputs.shape[0], -1, repeat_inputs.shape[3])
+    c = []
+    for i in range(dif_inputs.shape[1]):
+        tmp = torch.unsqueeze(dif_inputs[:, i, :], 1).repeat(1, dif_inputs.shape[1], 1)
+        c_i = torch.sum((tmp - dif_inputs) ** 2, dim=2)
+        c_i = torch.sum(torch.sigmoid(torch.ones_like(c_i) * r - c_i), dim=1)
+        c.append(c_i)
+    p = torch.mean(torch.log(torch.stack(c, dim=1)), dim=1)
 
-    repeat_targets = dif_inputs.repeat(1, clip_inputs.shape[1], 1) # [B, T-m ** 2, m]
-
-    distance = torch.sum((repeat_inputs - repeat_targets), dim=2).view(clip_inputs.shape[0], clip_inputs.shape[1], clip_inputs.shape[1])
-    # [B, T-m, T-m]
-    c = torch.sum(torch.sigmoid(torch.ones_like(distance) * r - distance), dim=2)
-    # [B, T-m]
-    p = torch.mean(torch.log(c), dim=1)
-    # [B]
     return p
 
+def compute_wiener_entropy(inputs):
+	# [B, C, T]
+	sss = torch.stft(torch.mean(inputs, dim=1), n_fft=400)
+	# [B, N, F, 2]
+	sss = sss[:, :, :, 0] ** 2 + sss[:, :, :, 1] ** 2
+	# [B, N, F]
+	geo = torch.exp(torch.mean(torch.log(sss), dim=1))
+	# [B, F]
+	mean = torch.mean(sss, dim=1)
+	eps = 0.00001 * torch.ones_like(mean)
+	wiener = geo / (mean + eps)
+	return torch.mean(wiener, dim=1)	
+
+def compute_power_spectral_entropy(inputs):
+	# [B, C, T]
+	sss = torch.stft(torch.mean(inputs, dim=1), n_fft=400)
+	# [B, N, F, 2]
+	sss = sss[:, :, :, 0] 
+	# [B, N, F]
+	spec = torch.mean(sss ** 2, dim=1)
+	# [B, F]
+	summ = torch.unsqueeze(torch.sum(spec, dim=1), dim=1).repeat(1, spec.shape[1])
+	prob = spec / summ 
+	entropy = torch.sum(prob * torch.log(prob), dim=1) * -1
+	return entropy	
 
