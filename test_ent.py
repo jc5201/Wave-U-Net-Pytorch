@@ -7,33 +7,43 @@ import numpy as np
 
 from test import predict_song
 from waveunet import Waveunet
-from loss import compute_power_spectral_entropy as entropy
+import loss 
 
 def main(args):
     # MODEL
 
-    m = args.m 
-    r = args.r 
+    #entropy = lambda x : loss.compute_approximate_entropy(x, 16, 2)
+    entropy = loss.compute_power_spectral_entropy
 
-    input1 = load_song(args, args.input1)[:, :, 1024:2048]
-    print(input1.shape)
-    input2 = load_song(args, args.input2)[:, :, 1024:2048]
-    input3 = load_song(args, args.input3)[:, :, 1024:2048]
-    input4 = load_song(args, args.input4)[:, :, 1024:2048]
+    vocals = load_song(args, args.input1)
+    bass = load_song(args, args.input2)
+    drums = load_song(args, args.input3)
+    print(vocals.shape)
 
-    print(entropy(input1))
-    print(entropy(input2))
-    print(entropy(input3))
-    print(entropy(input4))
+    start, len = [10000 + 102400 * i for i in range(1, 10)], 10240
+
+    vocals_ = vocals
+    bass_ = bass
+    drums_ = drums
+
+    print("vocal : " + str(evaluate(vocals_, start, len, entropy)))
+    print("bass : " + str(evaluate(bass_, start, len, entropy)))
+    print("drums : " + str(evaluate(drums_, start, len, entropy)))
     print("===========")
-    mix1 = torch.cat([input1, input1], dim=2)
-    mix2 = torch.cat([input1, input2], dim=2)
-    mix3 = torch.cat([input1, input3], dim=2)
-    mix4 = torch.cat([input1, input4], dim=2)
-    print(entropy(mix1))
-    print(entropy(mix2))
-    print(entropy(mix3))
-    print(entropy(mix4))
+    print("vocal + bass : " + str(evaluate(vocals_ * 0.5 + bass_ * 0.5, start, len, entropy)))
+    print("vocal + drums : " + str(evaluate(vocals_ * 0.5 + drums_ * 0.5, start, len, entropy)))
+    print("bass + drums : " + str(evaluate(bass_ * 0.5 + drums_ * 0.5, start, len, entropy)))
+    print("===========")
+    print("vocal 0 + bass 1 : " + str(evaluate(vocals_ * 0 + bass_ * 1, start, len, entropy)))
+    print("vocal 0.2 + bass 0.8 : " + str(evaluate(vocals_ * 0.2 + bass_ * 0.8, start, len, entropy)))
+    print("vocal 0.4 + bass 0.6 : " + str(evaluate(vocals_ * 0.4 + bass_ * 0.6, start, len, entropy)))
+    print("===========")
+
+def evaluate(song, start, len, entropy):
+    batch = []
+    for s in start:
+        batch.append(song[:, :, s:s+len])
+    return entropy(torch.cat(batch, dim=0))
 
 def load_song(args, path):
 

@@ -26,19 +26,19 @@ def compute_si_sdr(inputs: torch.Tensor, targets: torch.Tensor):
     pair_wise_si_snr = -10 * torch.mean(torch.log10(pair_wise_si_snr + eps))  # [B, C, C]
     return pair_wise_si_snr
 
-def compute_L1_time(m, r) :
-    def compute(inputs, targets):
+def compute_L1_time() :
+    def computet(inputs, targets):
         # shape : batch, channel, length
         L1 = nn.L1Loss()
 
         sss = torch.stft(torch.mean(inputs, dim=1), n_fft=400)
         # [B, N, F, 2]
-        time_diff = sss[:, :, :-1, 0] - sss[:, :, 1:, 0]
+        time_diff = torch.abs(sss[:, :, :-1, 0] - sss[:, :, 1:, 0])
         time_diff = torch.mean(torch.mean(time_diff, dim=2), dim=1)
 
-        result = L1(inputs, targets) + 0.1 * compute_power_spectral_entropy(time_diff)
+        result = L1(inputs, targets) + 0.1 * time_diff
         return torch.mean(result)
-    return compute
+    return computet
 
 def compute_L1_entropy(m, r) :
     def compute(inputs, targets):
