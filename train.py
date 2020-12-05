@@ -81,7 +81,15 @@ def main(args):
     # LOAD MODEL CHECKPOINT IF DESIRED
     if args.load_model is not None:
         print("Continuing training full model from checkpoint " + str(args.load_model))
-        state = utils.load_model(model, optimizer, args.load_model, args.cuda)
+        if args.load_state_only:
+            state = utils.load_model(model, None, args.load_model, args.cuda)
+            optimizer = Adam(params=model.parameters(), lr=args.lr)
+            state = {'step': 0,
+                     "worse_epochs" : 0,
+                     "epochs" : 0,
+                     "best_loss" : np.Inf}
+        else:
+            state = utils.load_model(model, optimizer, args.load_model, args.cuda)
 
     print('TRAINING START')
     while state["worse_epochs"] < args.patience:
@@ -240,6 +248,8 @@ if __name__ == '__main__':
                         help="")
     parser.add_argument('--approximate_entropy_r', type=float, default=2,
                         help="")
+    parser.add_argument('--load_state_only', action='store_true',
+                        help='Load from single checkpoint (not resume)')
 
     args = parser.parse_args()
 
