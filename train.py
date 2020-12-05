@@ -17,7 +17,7 @@ from data import get_musdb_folds, SeparationDataset, random_amplify, crop
 from test import evaluate, validate
 from waveunet import Waveunet
 
-from loss import compute_si_sdr, compute_L1_entropy, compute_L1_time
+from loss import compute_si_sdr, compute_L1_entropy, compute_L1_time, compute_multi_scale_spectral_loss
 
 def main(args):
     #torch.backends.cudnn.benchmark=True # This makes dilated conv much faster for CuDNN 7.5
@@ -66,6 +66,8 @@ def main(args):
         criterion = compute_L1_entropy(args.approximate_entropy_m, args.approximate_entropy_r)
     elif args.loss == "L1_time":
         criterion = compute_L1_time()
+    elif args.loss == "multi_spec":
+        criterion = compute_multi_scale_spectral_loss()
     else:
         raise NotImplementedError("Couldn't find this loss!")
 

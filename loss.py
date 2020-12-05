@@ -40,6 +40,20 @@ def compute_L1_time() :
         return torch.mean(result)
     return computet
 
+def compute_multi_scale_spectral_loss() :
+    def computec(inputs, targets):
+        loss = []
+        n_ffts = [2048, 512, 128, 32]
+        for n_fft in n_ffts:
+            spec_inputs = torch.stft(torch.mean(inputs, dim=1), n_fft=n_fft)[:, :, :, 0]
+            spec_targets = torch.stft(torch.mean(targets, dim=1), n_fft=n_fft)[:, :, :, 0]
+            # [B, N, F]
+            L1 = torch.mean(torch.mean(torch.abs(spec_inputs - spec_targets), dim=2), dim=1)
+            L1_log = torch.mean(torch.mean(torch.abs(torch.log(spec_inputs) - torch.log(spec_targets)), dim=2), dim=1)
+            loss.append(L1 + L1_log)
+        return torch.mean(torch.stack(loss, dim=1))
+    return computec
+
 def compute_L1_entropy(m, r) :
     def compute(inputs, targets):
         # shape : batch, channel, length
