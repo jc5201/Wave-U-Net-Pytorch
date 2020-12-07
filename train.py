@@ -63,9 +63,9 @@ def main(args):
     elif args.loss == "SI-SDR":
         criterion = compute_si_sdr
     elif args.loss == "entropy":
-        criterion = compute_L1_entropy(args.approximate_entropy_m, args.approximate_entropy_r)
+        criterion = compute_L1_entropy(int(args.loss_arg_1), args.loss_arg_2)
     elif args.loss == "L1_time":
-        criterion = compute_L1_time()
+        criterion = compute_L1_time(args.loss_arg_1)
     elif args.loss == "multi_spec":
         criterion = compute_multi_scale_spectral_loss()
     else:
@@ -246,9 +246,9 @@ if __name__ == '__main__':
     parser.add_argument('--difference_output', type=int, default=0,
                         help="Train last instrument as difference of input and sum of other instruments (1 for True and 0 for False)")
 
-    parser.add_argument('--approximate_entropy_m', type=int, default=32,
+    parser.add_argument('--loss_arg_1', type=float, default=32,
                         help="")
-    parser.add_argument('--approximate_entropy_r', type=float, default=2,
+    parser.add_argument('--loss_arg_2', type=float, default=2,
                         help="")
     parser.add_argument('--load_state_only', action='store_true',
                         help='Load from single checkpoint (not resume)')

@@ -26,27 +26,33 @@ def compute_si_sdr(inputs: torch.Tensor, targets: torch.Tensor):
     pair_wise_si_snr = -10 * torch.mean(torch.log10(pair_wise_si_snr + eps))  # [B, C, C]
     return pair_wise_si_snr
 
-def compute_L1_time() :
+def compute_L1_time(time_coeff) :
     def computet(inputs, targets):
         # shape : batch, channel, length
         L1 = nn.L1Loss()
 
         sss = torch.stft(torch.mean(inputs, dim=1), n_fft=400)
+        sss= sss[:, :, :, 0] ** 2 + sss[:, :, :, 1] ** 2
         # [B, N, F, 2]
-        time_diff = torch.abs(sss[:, :, :-1, 0] - sss[:, :, 1:, 0])
+        time_diff = torch.abs(sss[:, :, :-1] - sss[:, :, 1:])
         time_diff = torch.mean(torch.mean(time_diff, dim=2), dim=1)
 
-        result = L1(inputs, targets) + 0.1 * time_diff
+        result = L1(inputs, targets) + time_coeff * time_diff
         return torch.mean(result)
     return computet
 
 def compute_multi_scale_spectral_loss() :
     def computec(inputs, targets):
+        eps = 0.0001
         loss = []
         n_ffts = [2048, 512, 128, 32]
         for n_fft in n_ffts:
-            spec_inputs = torch.stft(torch.mean(inputs, dim=1), n_fft=n_fft)[:, :, :, 0]
-            spec_targets = torch.stft(torch.mean(targets, dim=1), n_fft=n_fft)[:, :, :, 0]
+            spec_inputs = torch.stft(torch.mean(inputs, dim=1), n_fft=n_fft)
+            spec_inputs = spec_inputs[:, :, :, 0] ** 2 + spec_inputs[:, :, :, 1] ** 2
+            spec_inputs = spec_inputs + eps * torch.ones_like(spec_inputs)
+            spec_targets = torch.stft(torch.mean(targets, dim=1), n_fft=n_fft)
+            spec_targets = spec_targets[:, :, :, 0] ** 2 + spec_targets[:, :, :, 1] ** 2
+            spec_targets = spec_targets + eps * torch.ones_like(spec_targets)
             # [B, N, F]
             L1 = torch.mean(torch.mean(torch.abs(spec_inputs - spec_targets), dim=2), dim=1)
             L1_log = torch.mean(torch.mean(torch.abs(torch.log(spec_inputs) - torch.log(spec_targets)), dim=2), dim=1)
